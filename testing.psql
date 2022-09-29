@@ -1,0 +1,225 @@
+-- Add a department that already exists
+CALL add_department(1,'HR');
+
+-- Add a new department
+CALL add_department(11, 'Procurement');
+SELECT * FROM Departments;
+
+-- Remove a department with no employees
+CALL remove_department(11);
+SELECT * FROM Departments;
+
+-- Add a new room
+CALL add_room(9, 2, 'Research Room 2', 9, 2, '10/9/2021');
+SELECT * FROM MeetingRooms;
+SELECT * FROM Updates;
+
+-- Change cap of a room that has not been booked
+CALL change_capacity(1, 3, 3, '2021-09-11', 9);
+SELECT * FROM MeetingRooms;
+SELECT * FROM Updates;
+
+-- Non-manager trying to change cap of a room
+CALL change_capacity(1, 3, 3, '2021-09-11', 7);
+SELECT * FROM Updates;
+
+-- A past manager who resigns tries to change the capacity
+CALL remove_employee(9, '2021-09-11');
+SELECT * FROM Employees WHERE eid = 9;
+CALL change_capacity(1, 3, 3, '2021-09-12', 9);
+SELECT * FROM Updates;
+
+-- Changing capacity on a same day as it is last updated
+CALL change_capacity(1, 4, 3, '2021-09-10', 12);
+SELECT * FROM Updates;
+CALL change_capacity(1, 4, 4, '2021-09-10', 12);
+SELECT * FROM Updates;
+
+-- Add a Junior
+CALL add_employee('George Harvey', 67482438, 83363773, 62659888, 'Junior', 8);
+SELECT * FROM Employees WHERE ename = 'George Harvey';
+SELECT * FROM Junior;
+
+-- Add a Senior
+CALL add_employee('Muskaan Scott', 65342746, 98206789, 63924359, 'Senior', 8);
+SELECT * FROM Employees WHERE ename = 'Muskaan Scott';
+SELECT * FROM Senior;
+
+-- Add a Manager
+CALL add_employee('Aviana Walters', 65667101, 87379492, 62875534, 'Manager', 8);
+SELECT * FROM Employees WHERE ename = 'Aviana Walters';
+SELECT * FROM Manager;
+SELECT * FROM Booker;
+
+-- Removing a booker who has meetings after his resigned date
+CALL remove_employee(29, '2021-10-30');
+SELECT * FROM BookSessions;
+SELECT * FROM Joins;
+
+-- Removing a non-booker who has meetings after his resigned date
+CALL remove_employee(19, '2021-10-30');
+SELECT * FROM Joins;
+
+-- Removing an employee who has no meetings after his resigned date
+CALL remove_employee(13, '2021-10-30');
+SELECT * FROM Employees WHERE eid = 13;
+
+-- Search available rooms when one of the rooms is not available 
+SELECT * FROM search_room(3, '2021-11-04', 13, 15);
+SELECT * FROM BookSessions WHERE sdate = '2021-11-04' AND stime >= 13 AND stime < 15;
+
+-- Search a room when it is not available
+SELECT * FROM search_room(3, '2021-11-05', 9, 10);
+
+-- Book a room that is not available on first hour but available in the next
+CALL book_room(1, 6, '2021-11-04', 13, 15, 17);
+SELECT * FROM BookSessions;
+SELECT * FROM Joins;
+
+-- A junior trying to book a room
+CALL book_room(1, 2, '2021-11-01', 8, 9, 4);
+
+-- A person having fever trying to book room
+CALL book_room(1, 9, '2021-11-01', 13, 15, 27);
+
+-- A Resigned employee trying to book a room
+SELECT * FROM Employees WHERE resigned_date IS NOT NULL;
+CALL book_room(1, 3, '2021-11-04', 13, 15, 9);
+
+-- A person trying to book a room in the past
+CALL book_room(1, 6, '2021-10-29', 13, 15, 17);
+
+-- Unbooking a room that is approved but not yet conducted
+SELECT * FROM BookSessions WHERE mid IS NOT NULL AND sdate>= '2021-10-30';
+CALL unbook_room(1, 9, '2021-11-06', 8, 9, 27);
+SELECT * FROM BookSessions WHERE mid IS NOT NULL AND sdate>= '2021-10-30';
+SELECT * FROM Joins;
+SELECT * FROM BookSessions;
+
+-- Unbooking a room that has been conducted in the past
+SELECT * FROM BookSessions WHERE mid IS NOT NULL AND sdate < '2021-10-30';
+CALL unbook_room(1, 9, '2021-10-28', 8, 9, 26);
+
+-- Someone who is not the original booker tries to unbook other people’s room that are pending
+SELECT * FROM BookSessions WHERE mid IS NULL AND sdate>= '2021-10-30';
+CALL unbook_room(1, 6, '2021-11-04', 13, 14, 18);
+SELECT * FROM BookSessions WHERE mid IS NULL AND sdate>= '2021-10-30';
+
+-- Unbooking rooms at Invalid hours 
+CALL unbook_room(1, 6, '2021-11-04', 13, 25, 18);
+
+-- Employee trying to join a meeting that he can for first 2 hours but not remaining (status is still pending)
+SELECT * FROM BookSessions WHERE mid IS NULL AND sdate >= '2021-10-30';
+CALL join_meeting(1, 1, '2021-11-03', 14, 17, 3);
+SELECT * FROM Joins;
+
+-- Employee who has resigned trying to join a meeting
+SELECT * FROM Employees WHERE resigned_date IS NOT NULL;
+CALL join_meeting(1, 1, '2021-11-03', 14, 17, 13);
+
+-- Employee who has a fever trying to join a meeting
+SELECT * FROM HealthDeclaration WHERE fever = true;
+CALL join_meeting(1, 1, '2021-11-03', 14, 17, 27);
+
+-- Employee trying to join a meeting where capacity is reached  
+CALL change_capacity(1, 4, 2, '2021-10-30', 12);
+SELECT * FROM CapOfRoom(4, 1, '2021-11-01');
+CALL book_room(1, 4, '2021-11-01', 8, 9, 12);
+CALL join_meeting(1, 4, '2021-11-01', 8, 9, 10);
+SELECT * FROM MeetingPax(4, 1, '2021-11-01', 8);
+CALL join_meeting(1, 4, '2021-11-01', 8, 9, 11);
+SELECT * FROM BookSessions;
+SELECT * FROM Joins;
+
+-- Employee trying to join a meeting in the past    
+SELECT * FROM BookSessions WHERE sdate < '2021-10-30';
+CALL join_meeting(1, 9, '2021-10-28', 8, 9, 11);
+
+-- Joining a meeting at invalid hours
+CALL join_meeting(1, 1, '2021-11-03', 100, 101, 5);
+
+-- Trying to leave a meeting that does not exists
+CALL leave_meeting(1, 1, '2021-11-07', 8, 9, 2);
+
+-- Trying to leave a meeting that has been approved
+SELECT * FROM BookSessions WHERE mid IS NOT NULL AND sdate > '2021-10-30';
+CALL leave_meeting(1, 7, '2021-11-02', 9, 10, 21);
+SELECT * FROM BookSessions WHERE mid IS NOT NULL AND sdate > '2021-10-30';
+
+-- Booker leaves a meeting 
+SELECT * FROM BookSessions WHERE mid IS NULL AND sdate > '2021-10-30';
+CALL leave_meeting(1, 4, ' 2021-11-01', 8, 9, 12);
+SELECT * FROM BookSessions;
+SELECT * FROM Joins;
+
+-- Employee tries to leave a meeting in the past
+SELECT * FROM BookSessions WHERE sdate < '2021-10-30';
+CALL leave_meeting(1, 9, '2021-10-28', 8, 9, 26);
+
+-- Leaving a meeting at invalid hours
+CALL leave_meeting(1, 1, '2021-11-03', 100, 101, 5);
+
+-- Manager belonging to same department DISAPPROVING the booking
+CALL book_room(1, 4, '2021-11-01', 8, 9, 12);
+CALL join_meeting(1, 4, '2021-11-01', 8, 9, 10);
+SELECT * FROM BookSessions;
+CALL approve_meeting(1, 4, '2021-11-01', 8, 9, 12, false);
+SELECT * FROM BookSessions;
+
+-- Manager belonging to same department approving the booking
+CALL book_room(1, 4, '2021-11-01', 8, 9, 12);
+CALL join_meeting(1, 4, '2021-11-01', 8, 9, 10);
+SELECT * FROM BookSessions;
+CALL approve_meeting(1, 4, '2021-11-01', 8, 9, 12, true);
+SELECT * FROM BookSessions;
+
+-- Manager NOT belonging to the same department approving the booking
+CALL book_room(1, 4, '2021-11-01', 9, 10, 12);
+SELECT * FROM BookSessions;
+CALL approve_meeting(1, 4, '2021-11-01', 9, 10, 15, true);
+SELECT * FROM BookSessions;
+
+-- Non-manager tries to approve a booking
+CALL approve_meeting(1, 4, '2021-11-01', 9, 10, 10, true);
+
+-- Resigned Employees tries to declare health
+SELECT * FROM Employees WHERE resigned_date IS NOT NULL;
+CALL declare_health(9, '2021-10-30', 37.5);
+
+-- Employee declares health and has a fever
+SELECT * FROM HealthDeclaration WHERE eid = 31;
+CALL declare_health(31, '2021-10-30', 38.0);
+SELECT * FROM HealthDeclaration WHERE eid = 31;
+
+-- Employee declares health and does not have a fever
+SELECT * FROM HealthDeclaration WHERE eid = 32;
+CALL declare_health(32, '2021-10-30', 36.8);
+SELECT * FROM HealthDeclaration WHERE eid = 32;
+
+-- contact trace for an employee with fever
+SELECT * FROM BookSessions;
+SELECT * FROM Joins;
+SELECT * FROM contact_tracing(27, '2021-10-30');
+SELECT * FROM BookSessions;
+SELECT * FROM Joins;
+
+-- Trace close contact for resigned employee
+SELECT * FROM contact_tracing(9, '2021-10-30');
+
+-- Just checking from 24/10/2021 to today (based on availability of data)
+SELECT * FROM non_compliance('2021-10-24', '2021-10-30');
+
+-- Just checking if view_booking_report returns table correctly
+SELECT * FROM BookSessions WHERE mid IS NOT NULL;
+SELECT * FROM view_booking_report('2021-11-03', 5);
+
+-- Just checking if view_future_meeting returns table correctly
+SELECT * FROM Joins;
+SELECT * FROM BookSessions WHERE mid IS NOT NULL;
+SELECT * FROM view_future_meeting('2021-11-03', 5);
+
+-- Just checking if view_manager_report returns table correctly
+SELECT * FROM BookSessions WHERE mid IS NULL;
+SELECT * FROM view_manager_report('2021-10-30', 3);
+
+
